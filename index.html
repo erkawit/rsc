@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบทะเบียนคุมออกหมายจับ 47 และ 47 ทวิ</title>
+
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            court: {
+              dark: '#0A192F',
+              navy: '#102A43',
+              blue: '#1E3A8A',
+              accent: '#2563EB',
+              gold: '#D97706',
+              light: '#F8FAFC'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- jQuery & DataTables CSS & JS -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+
+  <!-- Flatpickr for Thai Datepicker -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- ========================================== -->
+  <!-- 1. LOGIN MODAL VIEW (ข้อ 7, 9) -->
+  <!-- ========================================== -->
+  <div id="login_modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-fade-in">
+      <div class="bg-gradient-to-r from-slate-900 via-blue-950 to-blue-900 p-6 text-white text-center relative">
+        <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-inner">
+          <i class="fa-solid fa-scale-balanced text-3xl text-amber-400"></i>
+        </div>
+        <h2 class="text-xl font-bold tracking-wide">ระบบทะเบียนคุมออกหมายจับ</h2>
+        <p class="text-sm text-blue-200 mt-1 font-medium">หมายจับ 47 และ 47 ทวิ</p>
+      </div>
+
+      <form id="login_form" class="p-6 space-y-4">
+
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-user"></i>
+            </span>
+            <input type="text" id="login_username" required
+              class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-800 text-sm"
+              placeholder="เช่น admin">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="password" id="login_password" required
+              class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-800 text-sm"
+              placeholder="••••••••">
+          </div>
+        </div>
+
+        <button type="submit"
+          class="w-full py-3 px-4 bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. MAIN APPLICATION LAYOUT -->
+  <!-- ========================================== -->
+  <div id="app_container" class="hidden flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR (ข้อ 12, 13) -->
+    <aside id="main_sidebar" class="sidebar fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:static md:translate-x-0 -translate-x-full shadow-2xl">
+      <!-- Sidebar Header -->
+      <div class="p-4 bg-slate-950 flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-blue-900 rounded-lg flex items-center justify-center text-amber-400 font-bold border border-blue-700">
+            <i class="fa-solid fa-gavel text-lg"></i>
+          </div>
+          <div>
+            <h1 class="text-sm font-bold leading-tight">ทะเบียนคุมหมายจับ</h1>
+            <p class="text-xs text-amber-400 font-medium">47 และ 47 ทวิ</p>
+          </div>
+        </div>
+        <button onclick="toggleSidebar(false)" class="md:hidden text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- User Profile Card (Compact & Clean) -->
+      <div class="px-3.5 py-2.5 bg-slate-800/80 border-b border-slate-800 flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-full bg-blue-700/80 border border-blue-500/30 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p id="nav_user_fullname" class="text-xs font-semibold truncate text-white leading-tight">ผู้ใช้งาน</p>
+          <div class="flex items-center gap-1.5 mt-0.5">
+            <span id="nav_user_username" class="text-[11px] text-slate-400 truncate">@user</span>
+            <span id="nav_user_role" class="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-blue-600 text-white shrink-0">User</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Menus -->
+      <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto">
+        <div class="text-xs font-semibold text-slate-400 px-3 py-1 uppercase tracking-wider">เมนูหลัก</div>
+
+        <button onclick="navigateTo('dashboard')" id="nav_menu_dashboard"
+          class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800 transition">
+          <i class="fa-solid fa-chart-pie w-5 text-center text-blue-400"></i>
+          <span>หน้าแรก (แดชบอร์ด)</span>
+        </button>
+
+        <button onclick="navigateToForm('47')" id="nav_menu_form_47"
+          class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800 transition">
+          <i class="fa-solid fa-file-circle-plus w-5 text-center text-amber-400"></i>
+          <span>บันทึกหมายจับ 47</span>
+        </button>
+
+        <button onclick="navigateToForm('47_bis')" id="nav_menu_form_47_bis"
+          class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800 transition">
+          <i class="fa-solid fa-file-shield w-5 text-center text-purple-400"></i>
+          <span>บันทึกหมายจับ 47 ทวิ</span>
+        </button>
+
+        <button onclick="navigateTo('all_warrants')" id="nav_menu_all_warrants"
+          class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800 transition">
+          <i class="fa-solid fa-table-list w-5 text-center text-emerald-400"></i>
+          <span>รายการหมายจับทั้งหมด</span>
+        </button>
+
+        <!-- ADMIN MENU: ข้อ 2 & 13 แสดงเฉพาะ Admin เท่านั้น -->
+        <div id="menu_admin_section" class="pt-2 hidden border-t border-slate-800/80">
+          <div class="text-xs font-semibold text-amber-400 px-3 py-1 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-halved"></i> ผู้ดูแลระบบ
+          </div>
+          <button onclick="navigateTo('users_management')" id="nav_menu_users_management"
+            class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800 transition">
+            <i class="fa-solid fa-users-gear w-5 text-center text-amber-500"></i>
+            <span>จัดการผู้ใช้งานในระบบ</span>
+          </button>
+          <button onclick="navigateTo('settings')" id="nav_menu_settings"
+            class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition">
+            <i class="fa-solid fa-cloud-arrow-up w-5 text-center text-cyan-400"></i>
+            <span>ตั้งค่า Google Sheet</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="p-3 border-t border-slate-800">
+        <button onclick="handleLogout()"
+          class="w-full py-2.5 px-3 bg-red-950/40 hover:bg-red-900/60 text-red-300 hover:text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 border border-red-800/40">
+          <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+        </button>
+      </div>
+    </aside>
+
+    <!-- CONTENT WRAPPER -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100">
+
+      <!-- Top Header Navbar -->
+      <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+          <button onclick="toggleSidebar()" class="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg">
+            <i class="fa-solid fa-bars text-xl"></i>
+          </button>
+          <div class="flex items-center space-x-2">
+            <div class="h-8 w-1.5 bg-blue-900 rounded-full"></div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900 leading-tight">ระบบทะเบียนคุมออกหมายจับ 47 และ 47 ทวิ</h2>
+              <p class="text-xs text-slate-500">ฐานข้อมูลหมายจับศาลยุติธรรม (Google Sheets: DATA & USERS)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <!-- Quick Sync CSV Button -->
+          <button onclick="syncNow()" title="ซิงค์ข้อมูลล่าสุดผ่าน CSV"
+            class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-arrows-rotate text-blue-700"></i>
+            <span class="hidden sm:inline">โหลดข้อมูล CSV ใหม่</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Scrollable Area -->
+      <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+
+        <!-- ==================================================== -->
+        <!-- VIEW 1: DASHBOARD (ข้อ 10) -->
+        <!-- ==================================================== -->
+        <section id="view_dashboard" class="space-y-6">
+          
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">หมายจับ 47 ทั้งหมด</p>
+                <h3 id="stat_47" class="text-2xl font-bold text-blue-900 mt-1">0</h3>
+                <p class="text-xs text-blue-700 mt-1 flex items-center gap-1"><i class="fa-solid fa-file-lines"></i> รายการที่บันทึกแล้ว</p>
+              </div>
+              <div class="w-12 h-12 bg-blue-50 text-blue-800 rounded-xl flex items-center justify-center text-xl">
+                <i class="fa-solid fa-file-signature"></i>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">หมายจับ 47 ทวิ ทั้งหมด</p>
+                <h3 id="stat_47_bis" class="text-2xl font-bold text-indigo-900 mt-1">0</h3>
+                <p class="text-xs text-indigo-700 mt-1 flex items-center gap-1"><i class="fa-solid fa-file-circle-check"></i> รายการที่บันทึกแล้ว</p>
+              </div>
+              <div class="w-12 h-12 bg-indigo-50 text-indigo-800 rounded-xl flex items-center justify-center text-xl">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">รวมหมายจับทั้งหมด</p>
+                <h3 id="stat_total" class="text-2xl font-bold text-slate-900 mt-1">0</h3>
+                <p class="text-xs text-slate-500 mt-1 flex items-center gap-1"><i class="fa-solid fa-database"></i> ทั้งสองประเภทในระบบ</p>
+              </div>
+              <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-xl flex items-center justify-center text-xl">
+                <i class="fa-solid fa-folder-tree"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- ข้อ 10: กำหนดให้หน้าแรกแสดงรายการหมายจับ 47 แยกรายการกับหมายจับ 47 ทวิ เป็นคนละตาราง และแสดงผ่าน DataTables โดยกำหนดให้แสดงเพียง 5 รายการล่าสุดเสมอ เป็นค่าพื้นฐาน -->
+          
+          <!-- ตารางที่ 1: รายการหมายจับ 47 (5 รายการล่าสุด) -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-900 to-blue-800 px-5 py-3.5 flex items-center justify-between text-white">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-file-contract text-amber-400"></i>
+                <h3 class="font-bold text-base">รายการหมายจับ 47 (5 รายการล่าสุด)</h3>
+              </div>
+              <span class="text-xs bg-blue-950/60 border border-blue-700 text-blue-200 px-2.5 py-1 rounded-full">
+                ค่าเริ่มต้น 5 รายการ
+              </span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table id="table_47" class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                    <th class="px-4 py-3 text-center w-12">ลำดับ</th>
+                    <th class="px-4 py-3">เลขหมายจับ</th>
+                    <th class="px-4 py-3">เลขคดีดำ</th>
+                    <th class="px-4 py-3">เลขคดีแดง</th>
+                    <th class="px-4 py-3">ส่วนที่ออกหมายจับ</th>
+                    <th class="px-4 py-3">วันที่ออกหมายจับ</th>
+                    <th class="px-4 py-3 text-center w-28">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="table_47_body" class="divide-y divide-slate-100">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- ข้อ 10: ปุ่มใต้ตารางเพื่อเปิดรายการแสดงทั้งหมด พร้อม Progress bar ไล่เฉดสีขาวไปเขียว -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <span class="text-xs text-slate-500">แสดงผล 5 รายการล่าสุดตามเงื่อนไขข้อ 10</span>
+              <button onclick="viewAllWarrantsWithProgress('47')"
+                class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i> ดูรายการหมายจับ 47 ทั้งหมด (View All)
+              </button>
+            </div>
+          </div>
+
+          <!-- ตารางที่ 2: รายการหมายจับ 47 ทวิ (5 รายการล่าสุด) -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-900 to-indigo-950 px-5 py-3.5 flex items-center justify-between text-white">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-shield-halved text-amber-400"></i>
+                <h3 class="font-bold text-base">รายการหมายจับ 47 ทวิ (5 รายการล่าสุด)</h3>
+              </div>
+              <span class="text-xs bg-slate-950/60 border border-slate-700 text-indigo-200 px-2.5 py-1 rounded-full">
+                ค่าเริ่มต้น 5 รายการ
+              </span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table id="table_47_bis" class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                    <th class="px-4 py-3 text-center w-12">ลำดับ</th>
+                    <th class="px-4 py-3">เลขหมายจับ</th>
+                    <th class="px-4 py-3">เลขคดีดำ</th>
+                    <th class="px-4 py-3">เลขคดีแดง</th>
+                    <th class="px-4 py-3">ส่วนที่ออกหมายจับ</th>
+                    <th class="px-4 py-3">วันที่ออกหมายจับ</th>
+                    <th class="px-4 py-3 text-center w-28">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="table_47_bis_body" class="divide-y divide-slate-100">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- ปุ่มใต้ตาราง 47 ทวิ -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <span class="text-xs text-slate-500">แสดงผล 5 รายการล่าสุดตามเงื่อนไขข้อ 10</span>
+              <button onclick="viewAllWarrantsWithProgress('47 ทวิ')"
+                class="px-4 py-2 bg-indigo-900 hover:bg-indigo-800 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i> ดูรายการหมายจับ 47 ทวิ ทั้งหมด (View All)
+              </button>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==================================================== -->
+        <!-- VIEW 2: FORM กรอกข้อมูลหมายจับ (ข้อ 1 - 5) -->
+        <!-- ==================================================== -->
+        <section id="view_form_warrant" class="hidden max-w-4xl mx-auto space-y-6">
+          <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-900 via-blue-950 to-slate-900 p-5 text-white">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-file-circle-plus text-amber-400"></i> แบบฟอร์มบันทึกข้อมูลออกหมายจับ
+                  </h3>
+                  <p class="text-xs text-blue-200 mt-1">กรอกข้อมูลหมายจับตามระเบียบศาลยุติธรรม (ข้อ 1 - 5)</p>
+                </div>
+                <button type="button" onclick="resetWarrantForm()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded border border-white/20 transition">
+                  <i class="fa-solid fa-rotate-left mr-1"></i> ล้างฟอร์ม
+                </button>
+              </div>
+            </div>
+
+            <form id="warrant_form" class="p-6 space-y-6">
+              
+              <!-- ตัวเลือกประเภทหมายจับ (47 หรือ 47 ทวิ) -->
+              <div>
+                <label class="block text-sm font-bold text-slate-800 mb-2">ประเภทหมายจับ <span class="text-red-500">*</span></label>
+                <div class="grid grid-cols-2 gap-4">
+                  <label class="flex items-center p-3 rounded-lg border-2 border-slate-200 cursor-pointer hover:border-blue-700 transition">
+                    <input type="radio" name="warrant_type" id="type_47" value="47" checked class="w-4 h-4 text-blue-700 focus:ring-blue-700">
+                    <span class="ml-3 font-bold text-slate-800">หมายจับ 47</span>
+                  </label>
+                  <label class="flex items-center p-3 rounded-lg border-2 border-slate-200 cursor-pointer hover:border-purple-700 transition">
+                    <input type="radio" name="warrant_type" id="type_47_bis" value="47 ทวิ" class="w-4 h-4 text-purple-700 focus:ring-purple-700">
+                    <span class="ml-3 font-bold text-slate-800">หมายจับ 47 ทวิ</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- ข้อ 1: เลขหมายจับ (ตัวเลข / เลือกปี พ.ศ. ปัจจุบันก่อน ย้อนหลัง 20 ปี) -->
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <label class="block text-sm font-bold text-slate-800 mb-1">
+                  1. เลขหมายจับ <span class="text-red-500">*</span>
+                </label>
+                <p class="text-xs text-slate-500 mb-3">กรอกตัวเลข / เลือกปี พ.ศ. (ปีปัจจุบันแสดงผลก่อน และย้อนหลังได้ 20 ปี) บันทึกเป็น ตัวเลข/ปี พ.ศ.</p>
+                <div class="flex items-center space-x-2">
+                  <div class="flex-1">
+                    <input type="number" id="warrant_number" required min="1"
+                      placeholder="เช่น 15"
+                      oninput="this.value = this.value.replace(/^0+/, '');"
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-800 focus:outline-none font-semibold text-slate-900">
+                  </div>
+                  <span class="text-xl font-bold text-slate-400">/</span>
+                  <div class="w-44">
+                    <select id="warrant_year" class="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-800 focus:outline-none bg-white font-semibold text-slate-800">
+                      <!-- Injected BE Years -->
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ข้อ 2: เลขคดีดำ (ตัวอักษรนำหน้า + autocomplete + ตัวเลข / เลือกปี พ.ศ.) -->
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <label class="block text-sm font-bold text-slate-900 mb-1">
+                  2. เลขคดีดำ <span class="text-red-500">*</span>
+                </label>
+                <p class="text-xs text-slate-500 mb-3">กรอกตัวอักษรนำหน้า (มีประวัติช่วยกรอกเมื่อคลิก), กรอกตัวเลข / เลือกปี พ.ศ.</p>
+                <div class="flex items-center space-x-2">
+                  <!-- Prefix with Autocomplete History -->
+                  <div class="w-36 relative">
+                    <input type="text" id="black_prefix" placeholder="เช่น อ"
+                      autocomplete="off"
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none text-case-black">
+                    <!-- Dropdown Suggestions -->
+                    <div id="black_prefix_suggestions" class="autocomplete-suggestions hidden"></div>
+                  </div>
+                  <!-- Case Number -->
+                  <div class="flex-1">
+                    <input type="number" id="black_number" required min="1"
+                      placeholder="เลขคดี เช่น 120"
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none text-case-black">
+                  </div>
+                  <span class="text-xl font-bold text-slate-400">/</span>
+                  <!-- Year BE Select -->
+                  <div class="w-44">
+                    <select id="black_year" class="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none bg-white text-case-black">
+                      <!-- Injected BE Years -->
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ข้อ 3: เลขคดีแดง (ตัวอักษรนำหน้า + autocomplete + ตัวเลข / เลือกปี พ.ศ.) -->
+              <div class="bg-red-50/50 p-4 rounded-xl border border-red-200">
+                <label class="block text-sm font-bold text-red-600 mb-1">
+                  3. เลขคดีแดง <span class="text-red-500">*</span>
+                </label>
+                <p class="text-xs text-slate-500 mb-3">กรอกตัวอักษรนำหน้า (มีประวัติช่วยกรอกเมื่อคลิก), กรอกตัวเลข / เลือกปี พ.ศ.</p>
+                <div class="flex items-center space-x-2">
+                  <!-- Prefix with Autocomplete History -->
+                  <div class="w-36 relative">
+                    <input type="text" id="red_prefix" placeholder="เช่น อ"
+                      autocomplete="off"
+                      class="w-full px-3 py-2.5 rounded-lg border border-red-300 focus:ring-2 focus:ring-red-600 focus:outline-none text-case-red">
+                    <!-- Dropdown Suggestions -->
+                    <div id="red_prefix_suggestions" class="autocomplete-suggestions hidden"></div>
+                  </div>
+                  <!-- Case Number -->
+                  <div class="flex-1">
+                    <input type="number" id="red_number" required min="1"
+                      placeholder="เลขคดี เช่น 88"
+                      class="w-full px-3 py-2.5 rounded-lg border border-red-300 focus:ring-2 focus:ring-red-600 focus:outline-none text-case-red">
+                  </div>
+                  <span class="text-xl font-bold text-red-400">/</span>
+                  <!-- Year BE Select -->
+                  <div class="w-44">
+                    <select id="red_year" class="w-full px-3 py-2.5 rounded-lg border border-red-300 focus:ring-2 focus:ring-red-600 focus:outline-none bg-white text-case-red">
+                      <!-- Injected BE Years -->
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ข้อ 4: ส่วนที่ออกหมายจับ (Select Option 9 รายการ) -->
+              <div>
+                <label class="block text-sm font-bold text-slate-800 mb-1">
+                  4. ส่วนที่ออกหมายจับ <span class="text-red-500">*</span>
+                </label>
+                <p class="text-xs text-slate-500 mb-2">เลือกหน่วยงาน/ส่วนที่ออกหมายจับตามที่กำหนดในข้อ 4.1 - 4.9</p>
+                <select id="department" required
+                  class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-800 focus:outline-none bg-white text-sm font-medium">
+                  <option value="" disabled selected>-- กรุณาเลือกส่วนงานที่ออกหมายจับ --</option>
+                  <option value="ส่วนช่วยอำนวยการ">4.1 ส่วนช่วยอำนวยการ</option>
+                  <option value="ส่วนคลัง">4.2 ส่วนคลัง</option>
+                  <option value="ส่วนบริหารจัดการคดี">4.3 ส่วนบริหารจัดการคดี</option>
+                  <option value="ส่วนบริการประชาชนและประชาสัมพันธ์">4.4 ส่วนบริการประชาชนและประชาสัมพันธ์</option>
+                  <option value="ส่วนช่วยพิจารณาคดี">4.5 ส่วนช่วยพิจารณาคดี</option>
+                  <option value="ส่วนไกล่เกลี่ยและประนอมข้อพิพาท">4.6 ส่วนไกล่เกลี่ยและประนอมข้อพิพาท</option>
+                  <option value="ส่วนเจ้าพนักงานคดี">4.7 ส่วนเจ้าพนักงานคดี</option>
+                  <option value="ส่วนเจ้าพนักงานตำรวจศาล">4.8 ส่วนเจ้าพนักงานตำรวจศาล</option>
+                  <option value="ส่วนเทคโนโลยีสารสนเทศ">4.9 ส่วนเทคโนโลยีสารสนเทศ</option>
+                </select>
+              </div>
+
+              <!-- ข้อ 5: วันเดือนปี (พ.ศ.) ที่ออกหมายจับ (Thai Datepicker) -->
+              <div>
+                <label class="block text-sm font-bold text-slate-800 mb-1">
+                  5. วันเดือนปี (พ.ศ.) ที่ออกหมายจับ <span class="text-red-500">*</span>
+                </label>
+                <p class="text-xs text-slate-500 mb-2">แสดงผลเป็นปี พ.ศ. (ปฏิทินไทย)</p>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <i class="fa-regular fa-calendar-days"></i>
+                  </span>
+                  <input type="text" id="issue_date" required readonly
+                    placeholder="เลือกวันที่ออกหมายจับ"
+                    class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-800 focus:outline-none bg-white text-sm font-medium cursor-pointer">
+                </div>
+              </div>
+
+              <!-- Live Preview Summary Card -->
+              <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-200">
+                <h4 class="text-xs font-bold uppercase text-blue-900 tracking-wider mb-2 flex items-center gap-1.5">
+                  <i class="fa-solid fa-eye"></i> ตัวอย่างข้อมูลที่จะบันทึก (Live Preview)
+                </h4>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <span class="text-slate-500 block">เลขหมายจับ:</span>
+                    <span id="preview_warrant" class="font-bold text-blue-900">-</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 block">เลขคดีดำ:</span>
+                    <span id="preview_black" class="text-case-black">-</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 block">เลขคดีแดง:</span>
+                    <span id="preview_red" class="text-case-red">-</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 block">วันที่ออกหมายจับ:</span>
+                    <span id="preview_date" class="font-semibold text-slate-800">-</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="pt-4 flex items-center justify-end space-x-3 border-t border-slate-200">
+                <button type="button" onclick="navigateTo('dashboard')"
+                  class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-semibold rounded-lg transition">
+                  ยกเลิก
+                </button>
+                <button type="submit"
+                  class="px-6 py-2.5 bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition flex items-center gap-2">
+                  <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลหมายจับ
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </section>
+
+        <!-- ==================================================== -->
+        <!-- VIEW 3: รายการหมายจับทั้งหมด (ข้อ 10, 12) -->
+        <!-- ==================================================== -->
+        <section id="view_all_warrants" class="hidden space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+              <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-table-list text-blue-900"></i> ทะเบียนคุมหมายจับทั้งหมดในระบบ
+                </h3>
+                <p class="text-xs text-slate-500">แสดงผลผ่าน DataTables รองรับการค้นหา กรอง และแก้ไขข้อมูลตามสิทธิ์</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button onclick="navigateToForm('47')" class="px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-plus"></i> เพิ่มหมายจับ 47
+                </button>
+                <button onclick="navigateToForm('47_bis')" class="px-3 py-1.5 bg-purple-900 hover:bg-purple-800 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-plus"></i> เพิ่มหมายจับ 47 ทวิ
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-4 overflow-x-auto">
+              <table id="table_all_warrants" class="w-full text-left display nowrap" style="width:100%">
+                <thead>
+                  <tr class="bg-blue-900 text-white text-xs">
+                    <th class="w-12 text-center">ลำดับ</th>
+                    <th class="text-center">ประเภท</th>
+                    <th>เลขหมายจับ</th>
+                    <th>เลขคดีดำ</th>
+                    <th>เลขคดีแดง</th>
+                    <th>ส่วนที่ออกหมายจับ</th>
+                    <th>วันที่ออกหมายจับ</th>
+                    <th>ผู้บันทึก</th>
+                    <th class="text-center w-28">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="table_all_warrants_body">
+                  <!-- Injected via DataTables -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================== -->
+        <!-- VIEW 4: จัดการผู้ใช้งานในระบบ (ข้อ 6, 9, 11, 13) - ADMIN ONLY -->
+        <!-- ==================================================== -->
+        <section id="view_users_management" class="hidden space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+              <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-users-gear text-amber-500"></i> จัดการผู้ใช้งานและระดับสิทธิ์
+                </h3>
+                <p class="text-xs text-slate-500">ระบบหลังบ้าน: สิทธิ์ Admin สามารถเพิ่ม ลบ แก้ไขผู้ใช้ได้ (ห้ามลบ user: admin)</p>
+              </div>
+              <button onclick="openAddUserModal()"
+                class="px-4 py-2 bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white text-xs font-semibold rounded-lg shadow flex items-center gap-2 transition">
+                <i class="fa-solid fa-user-plus"></i> เพิ่มผู้ใช้งานใหม่
+              </button>
+            </div>
+
+            <div class="mt-4 overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-900 text-white text-xs uppercase font-bold">
+                    <th class="px-4 py-3 text-center w-12">ลำดับ</th>
+                    <th class="px-4 py-3">ชื่อผู้ใช้งาน (Username)</th>
+                    <th class="px-4 py-3">ชื่อ-นามสกุล</th>
+                    <th class="px-4 py-3">ส่วนที่ออกหมายจับ</th>
+                    <th class="px-4 py-3 text-center">ระดับสิทธิ์ (Role)</th>
+                    <th class="px-4 py-3">วันที่สร้าง</th>
+                    <th class="px-4 py-3 text-center w-36">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="table_users_body" class="divide-y divide-slate-100">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================== -->
+        <!-- VIEW 5: ตั้งค่า Google Sheet / Web App URL (ข้อ 8) -->
+        <!-- ==================================================== -->
+        <section id="view_settings" class="hidden max-w-3xl mx-auto space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2 pb-3 border-b border-slate-200">
+              <i class="fa-solid fa-cloud-arrow-up text-cyan-600"></i> การเชื่อมต่อ Google Sheet & Apps Script
+            </h3>
+            
+            <div class="space-y-4 mt-4 text-sm">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Google Sheet ID ที่เชื่อมต่อ</label>
+                <input type="text" readonly value="1uhvnk1kRMmZRs1ZyKGjDK75s1ZJSekBJWu-IMt_ZdcA"
+                  class="w-full px-3 py-2 bg-slate-100 rounded-lg border border-slate-300 font-mono text-xs text-slate-600">
+                <a href="https://docs.google.com/spreadsheets/d/1uhvnk1kRMmZRs1ZyKGjDK75s1ZJSekBJWu-IMt_ZdcA/edit?usp=sharing" target="_blank"
+                  class="text-xs text-blue-700 hover:underline mt-1 inline-block">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิดดู Google Sheet ต้นทาง
+                </a>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Google Apps Script Web App URL (สำหรับเขียน/บันทึก/แก้ไขข้อมูล)</label>
+                <input type="url" id="settings_gas_url" placeholder="https://script.google.com/macros/s/.../exec"
+                  class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-800 focus:outline-none font-mono text-xs">
+                <p class="text-xs text-slate-500 mt-1">หลังจาก Deploy โค้ดในไฟล์ Code.gs แล้ว ให้นำ Web App URL มาใส่ที่นี่</p>
+              </div>
+
+              <div class="pt-2 flex items-center gap-3">
+                <button onclick="saveGasUrl()" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow transition">
+                  <i class="fa-solid fa-save mr-1"></i> บันทึกการตั้งค่า
+                </button>
+                <button onclick="syncNow()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg shadow transition">
+                  <i class="fa-solid fa-arrows-rotate mr-1"></i> ทดสอบโหลด CSV ทันที
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: EDIT WARRANT (แก้ไขหมายจับ) -->
+  <!-- ========================================== -->
+  <div id="edit_modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 animate-fade-in my-8">
+      <div class="bg-gradient-to-r from-blue-950 to-blue-900 p-4 text-white flex items-center justify-between">
+        <h3 class="font-bold flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-amber-400"></i> แก้ไขข้อมูลหมายจับ
+        </h3>
+        <button onclick="closeEditModal()" class="text-slate-300 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="edit_warrant_form" class="p-6 space-y-4">
+        <input type="hidden" id="edit_warrant_id">
+
+        <!-- ประเภทหมายจับ -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ประเภทหมายจับ</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex items-center p-2 rounded border border-slate-300 cursor-pointer">
+              <input type="radio" name="edit_warrant_type" id="edit_type_47" value="47">
+              <span class="ml-2 font-bold text-xs text-slate-800">หมายจับ 47</span>
+            </label>
+            <label class="flex items-center p-2 rounded border border-slate-300 cursor-pointer">
+              <input type="radio" name="edit_warrant_type" id="edit_type_47_bis" value="47 ทวิ">
+              <span class="ml-2 font-bold text-xs text-slate-800">หมายจับ 47 ทวิ</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 1. เลขหมายจับ -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">1. เลขหมายจับ</label>
+          <div class="flex items-center space-x-2">
+            <input type="number" id="edit_warrant_number" required min="1"
+              oninput="this.value = this.value.replace(/^0+/, '');"
+              class="flex-1 px-3 py-2 border rounded-lg text-sm font-semibold">
+            <span>/</span>
+            <select id="edit_warrant_year" class="w-32 px-3 py-2 border rounded-lg text-sm font-semibold bg-white"></select>
+          </div>
+        </div>
+
+        <!-- 2. เลขคดีดำ -->
+        <div>
+          <label class="block text-xs font-bold text-slate-900 mb-1">2. เลขคดีดำ</label>
+          <div class="flex items-center space-x-2">
+            <div class="w-28 relative">
+              <input type="text" id="edit_black_prefix" placeholder="เช่น อ" autocomplete="off" class="w-full px-2 py-2 border rounded-lg text-sm text-case-black">
+              <div id="edit_black_prefix_suggestions" class="autocomplete-suggestions hidden"></div>
+            </div>
+            <input type="number" id="edit_black_number" required min="1" class="flex-1 px-3 py-2 border rounded-lg text-sm text-case-black">
+            <span>/</span>
+            <select id="edit_black_year" class="w-32 px-3 py-2 border rounded-lg text-sm text-case-black bg-white"></select>
+          </div>
+        </div>
+
+        <!-- 3. เลขคดีแดง -->
+        <div>
+          <label class="block text-xs font-bold text-red-600 mb-1">3. เลขคดีแดง</label>
+          <div class="flex items-center space-x-2">
+            <div class="w-28 relative">
+              <input type="text" id="edit_red_prefix" placeholder="เช่น อ" autocomplete="off" class="w-full px-2 py-2 border border-red-300 rounded-lg text-sm text-case-red">
+              <div id="edit_red_prefix_suggestions" class="autocomplete-suggestions hidden"></div>
+            </div>
+            <input type="number" id="edit_red_number" required min="1" class="flex-1 px-3 py-2 border border-red-300 rounded-lg text-sm text-case-red">
+            <span>/</span>
+            <select id="edit_red_year" class="w-32 px-3 py-2 border border-red-300 rounded-lg text-sm text-case-red bg-white"></select>
+          </div>
+        </div>
+
+        <!-- 4. ส่วนที่ออกหมายจับ -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">4. ส่วนที่ออกหมายจับ</label>
+          <select id="edit_department" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+            <option value="ส่วนช่วยอำนวยการ">ส่วนช่วยอำนวยการ</option>
+            <option value="ส่วนคลัง">ส่วนคลัง</option>
+            <option value="ส่วนบริหารจัดการคดี">ส่วนบริหารจัดการคดี</option>
+            <option value="ส่วนบริการประชาชนและประชาสัมพันธ์">ส่วนบริการประชาชนและประชาสัมพันธ์</option>
+            <option value="ส่วนช่วยพิจารณาคดี">ส่วนช่วยพิจารณาคดี</option>
+            <option value="ส่วนไกล่เกลี่ยและประนอมข้อพิพาท">ส่วนไกล่เกลี่ยและประนอมข้อพิพาท</option>
+            <option value="ส่วนเจ้าพนักงานคดี">ส่วนเจ้าพนักงานคดี</option>
+            <option value="ส่วนเจ้าพนักงานตำรวจศาล">ส่วนเจ้าพนักงานตำรวจศาล</option>
+            <option value="ส่วนเทคโนโลยีสารสนเทศ">ส่วนเทคโนโลยีสารสนเทศ</option>
+          </select>
+        </div>
+
+        <!-- 5. วันเดือนปี (พ.ศ.) ที่ออกหมายจับ -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">5. วันเดือนปี (พ.ศ.) ที่ออกหมายจับ</label>
+          <input type="text" id="edit_issue_date" required readonly class="w-full px-3 py-2 border rounded-lg text-sm bg-white cursor-pointer">
+        </div>
+
+        <div class="pt-4 flex items-center justify-end space-x-2 border-t border-slate-200">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg">ยกเลิก</button>
+          <button type="submit" class="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow">บันทึกการแก้ไข</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: ADD / EDIT USER (จัดการผู้ใช้) -->
+  <!-- ========================================== -->
+  <div id="user_modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-fade-in">
+      <div class="bg-gradient-to-r from-slate-900 to-blue-950 p-4 text-white flex items-center justify-between">
+        <h3 id="user_modal_title" class="font-bold flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-amber-400"></i> เพิ่มผู้ใช้งานใหม่
+        </h3>
+        <button onclick="closeUserModal()" class="text-slate-300 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="user_form" class="p-6 space-y-4">
+        <input type="hidden" id="user_form_mode" value="add">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อผู้ใช้งาน (Username) <span class="text-red-500">*</span></label>
+          <input type="text" id="user_username" required
+            class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-800 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อ-นามสกุล / ตำแหน่ง</label>
+          <input type="text" id="user_fullname"
+            class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-800 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">รหัสผ่าน (Password) <span class="text-red-500">*</span></label>
+          <input type="password" id="user_password"
+            class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-800 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ส่วนที่ออกหมายจับ (สังกัด)</label>
+          <select id="user_department" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+            <option value="">-- ไม่ระบุ (สำหรับส่วนกลาง/Admin) --</option>
+            <option value="ส่วนช่วยอำนวยการ">ส่วนช่วยอำนวยการ</option>
+            <option value="ส่วนคลัง">ส่วนคลัง</option>
+            <option value="ส่วนบริหารจัดการคดี">ส่วนบริหารจัดการคดี</option>
+            <option value="ส่วนบริการประชาชนและประชาสัมพันธ์">ส่วนบริการประชาชนและประชาสัมพันธ์</option>
+            <option value="ส่วนช่วยพิจารณาคดี">ส่วนช่วยพิจารณาคดี</option>
+            <option value="ส่วนไกล่เกลี่ยและประนอมข้อพิพาท">ส่วนไกล่เกลี่ยและประนอมข้อพิพาท</option>
+            <option value="ส่วนเจ้าพนักงานคดี">ส่วนเจ้าพนักงานคดี</option>
+            <option value="ส่วนเจ้าพนักงานตำรวจศาล">ส่วนเจ้าพนักงานตำรวจศาล</option>
+            <option value="ส่วนเทคโนโลยีสารสนเทศ">ส่วนเทคโนโลยีสารสนเทศ</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ระดับสิทธิ์ (Role) <span class="text-red-500">*</span></label>
+          <select id="user_role" required class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+            <option value="user">User (ผู้ใช้งานทั่วไป - กรอกข้อมูลและแก้ไขได้เฉพาะของตนเอง)</option>
+            <option value="admin">Admin (ผู้ดูแลระบบ - แก้ไขได้ทั้งหมด และจัดการผู้ใช้)</option>
+          </select>
+        </div>
+
+        <div class="pt-3 flex items-center justify-end space-x-2 border-t border-slate-200">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg">ยกเลิก</button>
+          <button type="submit" class="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main JavaScript File -->
+  <script src="app.js"></script>
+</body>
+</html>
